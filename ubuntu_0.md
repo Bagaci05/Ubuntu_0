@@ -23,6 +23,8 @@ network:
           via: <Default Gatway>
         - to: default
           via: <IPv6 Address>
+      nameservers:
+        addresses: [8.8.8.8,8.8.4.4]
 ```
 
 Set DHCP
@@ -243,6 +245,43 @@ Add the following lines to the hosts file
 <IP_ADDRESS> <HOSTNAME>
 ```
 
+## DHCP and DNS server configuration (dnsmasq)
+
+```sh 
+sudo apt install dnsmasq
+```
+
+Modify the config file at ``/etc/dnsmasq.conf``
+
+### DHCP
+```
+interface=enp1s0
+
+# start address, end address, lease time
+dhcp-range=192.168.1.100,192.168.1.150,12h
+
+# default gateway
+dhcp-option=3,192.168.1.1
+
+# static ip to client
+dhcp-host=aa:bb:cc:dd:ee:ff,192.168.1.101
+```
+
+### DNS
+```
+# Don't read resolv.conf
+no-resolv
+
+# Forward queries
+server=8.8.8.8
+server=8.8.4.4
+
+# Set custom records
+address=/router/192.168.1.1
+local=/example.home/
+domain=exam.local
+```
+
 ## Enable ipv4 forwarding
 1. Edit sysctl configuration file
 ```sh
@@ -309,6 +348,11 @@ phpinfo();
 4. Restart Apache web server
 ```sh
 sudo systemctl restart apache2
+```
+
+## Basic HTML
+```html
+<!DOCTYPE html><html><body><h1>Hello World!</h1></body></html>
 ```
 
 ## MySQL Database Server Configuration
@@ -614,8 +658,50 @@ Follow the interactive prompts to delete the existing partition and create a new
 
 ## Rsnapshot Configuration - Backup Tool
 
-TODO
+```sh
+sudo apt install rsnapshot
+```
 
+Basic config file. NOTE: Config options and values need to be separated by tabs
+```sh
+config_version	1.2
+
+# Destination of the snapshots
+snapshot_root	/var/cache/rsnapshot/
+
+# External commands
+cmd_cp		/bin/cp
+cmd_rm		/bin/rm
+cmd_rsync	/usr/bin/rsync
+cmd_logger	/usr/bin/logger
+
+# How many snapshots to retain with aliases
+retain   daily 7
+retain   weekly 4
+retain   monthly 12
+# The alias can be anything
+# retain	mysnapshot	6
+
+### BACKUP POINTS / SCRIPTS
+# The destination path is relative to the backup root
+# backup /path/to/source path/to/destination
+backup	/home/		localhost/
+backup	/etc/		localhost/
+backup	/usr/local/	localhost/
+```
+
+Backups can be run with
+```sh
+rsnapshot <snapshot_alias>
+```
+
+Example cronfile for snapshotting 
+```
+# m   h   dom mon dow       command
+  0   4   *   *   *         /usr/bin/rsnapshot daily   # 4AM every day
+  0   3   *   *   1         /usr/bin/rsnapshot weekly  # Sunday 3AM
+  0   2   1   *   *         /usr/bin/rsnapshot monthly # 2AM on the 1st
+```
 
 ## SCRIPTING
 
